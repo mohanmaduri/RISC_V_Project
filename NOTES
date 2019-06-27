@@ -1,0 +1,87 @@
+Notes for installing the initial /pkgs/riscv tools
+Brian Cruikshank
+
+https://github.com/chipsalliance/rocket-chip
+https://github.com/riscv-boom/riscv-boom
+
+Misc installs needed for RiscV tools to build:
+Put in /pkgs/misc-bin
+   https://jdk.java.net/12/
+   jdk-12.0.1
+Install these with .configure -prefix=/pkgs/riscv/misc-bin ; make ; make install
+    automake-1.15  bison-3.4.1  flex-2.6.4  libtool-2.4	pkg-config-0.29.2  texinfo-6.6
+Install this with make install SETUP_PREFIX=/pkgs/riscv/misc-bin PREFIX=/pkgs/riscv/misc-bin
+    dtc-1.5.0 
+
+set the path to point to /pkgs/misc-bin/bin and /pkgs/misc-bin/jdk-12.0.1/bin 
+set the RISCV to point /pkgs/riscv-tools
+
+export RISCV='/pkgs/riscv/riscv-tools'
+PATH="$RISCV/bin:$PATH"
+PATH="/pkgs/riscv/misc-bin/bin:$PATH"
+PATH="/pkgs/riscv/misc-bin/jdk-12.0.1/bin/:$PATH"
+
+# get the initial git repos
+
+git clone https://github.com/ucb-bar/rocket-chip.git
+cd rocket-chip
+git submodule update --init
+git clone https://github.com/riscv-boom/boom-template.git
+
+# Build the submodules and start building the tools
+
+cd boom-template
+./scripts/init-submodules.sh
+./scripts/build-tools.sh
+
+# Do some initial build/tests for boom
+
+cd verisim
+# What about share folder that is under misc-bin?
+export CPPFLAGS="-I/pkgs/riscv/misc-bin/include"
+export LDFLAGS="-L/pkgs/riscv/misc-bin/lib"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/pkgs/riscv/misc-bin/lib
+make CONFIG=BoomConfig
+make run CONFIG=BoomConfig
+# Maybe try below in the future.  It takes a long time.
+#export MAKEFLAGS="$MAKEFLAGS -jN" # Assuming you have N cores on your host system
+cd /pkgs/riscv/boom-template/vsim
+make verilog
+
+# Build the smaller rocket-chip in order verilog for FPGA/VLSI
+
+cd /pkgs/riscv/rocket-chip/vsim
+make verilog
+# Verilog under vsim/generated-src
+
+# Using Synopsys memory compiler
+cd /work/$user/common
+mkdir memory_compiler
+cd memory_compiler
+source /pkgs/synopsys/saed_mc_v2_3_6/saed_mc/setup.sh
+export ICV_HOME_DIR="/pkgs/synopsys/2017/ic_validator"
+# put this at the end of your path to catch lc_shell in this area.
+PATH="$PATH:/pkgs/synopsys/I-2013.12-SP1/amd64/syn/bin"
+# Below is an example memory.  Need to make other config files and make files that are needed
+saed_mc /home/bcruik2/common/memory_compiler/SRAM4x16.config2 -work `pwd`
+
+links for Synopsys memory compiler information:
+evince /pkgs/synopsys/saed_mc_v2_3_6/saed_mc/doc/saed_mc_ug_v2.3.0_30062014.pdf
+https://ieeexplore.ieee.org/abstract/document/6877402
+https://e3da.csce.uark.edu/teaching/CSCE4914-17FA/lab/7.%20Memory%20Compiler.pdf
+https://www.researchgate.net/publication/269268695_Synopsys'_Educational_Generic_Memory_Compiler
+
+# Use this library for further work.  Don't use the lab library if working from scratch.
+/pkgs/synopsys/32_28nm
+
+# Standard library memories:
+evince /pkgs/synopsys/32_28nm/SAED32_EDK/lib/sram/doc/SAED32.28nm_Memories_b100_01312012.pdf
+evince /pkgs/synopsys/32_28nm/SAED32_EDK/lib/sram_lp/doc/SAED32.28nm_Low_Power_Memories_Rev_1.0.2_b100_01312012.pdf
+
+# IOs:
+evince /pkgs/synopsys/32_28nm/SAED32_EDK/lib/io_sp/doc/SAED32.28nm_IO_Special_Cell_Library_b100_01312012.pdf 
+evince /pkgs/synopsys/32_28nm/SAED32_EDK/lib/io_std/doc/SAED32.28nm_IO_Standard_Cell_Library_b100_01312012.pdf 
+
+#PLLs
+evince /pkgs/synopsys/32_28nm/SAED32_EDK/lib/pll/doc/SAED32.28nm_Phase_Locked_Loop_b100_01312012.pdf
+
